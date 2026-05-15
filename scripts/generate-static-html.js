@@ -3,9 +3,9 @@ const path = require("path");
 
 const buildDir = path.resolve(__dirname, "../public/build");
 
-// Read the manifest to find entry.client and CSS files
+// Find manifest, entry.client, and CSS files
 const manifestFiles = fs.readdirSync(buildDir);
-const manifest = manifestFiles.find((f) => f.startsWith("manifest-"));
+const manifestFile = manifestFiles.find((f) => f.startsWith("manifest-"));
 const entryClient = manifestFiles.find((f) => f.startsWith("entry.client-"));
 const tailwindCss = (() => {
   const assetsDir = path.join(buildDir, "_assets");
@@ -18,6 +18,43 @@ if (!entryClient) {
   process.exit(1);
 }
 
+// Read manifest to discover all route modules
+let routeModules = {};
+if (manifestFile) {
+  const manifestContent = fs.readFileSync(
+    path.join(buildDir, manifestFile),
+    "utf-8"
+  );
+  const manifestMatch = manifestContent.match(
+    /window\.__remixManifest\s*=\s*({.*?});$/s
+  );
+  if (manifestMatch) {
+    try {
+      const manifest = JSON.parse(manifestMatch[1]);
+      if (manifest.routes) {
+        const imports = Object.keys(manifest.routes).map((routeId, idx) => {
+          const route = manifest.routes[routeId];
+          return `import * as route${idx} from ${JSON.stringify(route.module)};`;
+        });
+        const assignments = Object.keys(manifest.routes)
+          .map((routeId, idx) => `${JSON.stringify(routeId)}:route${idx}`)
+          .join(",");
+        routeModules = {
+          importCode: imports.join("\n"),
+          assignCode: `window.__remixRouteModules = {${assignments}};`,
+        };
+      }
+    } catch (e) {
+      console.warn("Failed to parse manifest:", e.message);
+    }
+  }
+}
+
+const routeModuleScript =
+  routeModules.importCode && routeModules.assignCode
+    ? `\n<script type="module">\n${routeModules.importCode}\nwindow.__remixContext = { appState: {} };\n${routeModules.assignCode}\n</script>`
+    : `<script type="module">window.__remixContext = { appState: {} }; window.__remixRouteModules = {};</script>`;
+
 const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,8 +66,8 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
   <div id="root"></div>
-  ${manifest ? `<script type="module" src="/build/${manifest}"></script>` : ""}
-  <script type="module">window.__remixContext = { appState: {} }</script>
+  ${manifestFile ? `<script type="module" src="/build/${manifestFile}"></script>` : ""}
+  ${routeModuleScript}
   <script defer type="module" src="/build/${entryClient}"></script>
 </body>
 </html>
