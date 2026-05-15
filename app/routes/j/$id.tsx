@@ -146,21 +146,7 @@ export default function JsonDocumentRoute() {
           <JsonColumnViewProvider>
             <JsonSearchProvider>
               <JsonTreeViewProvider overscan={25}>
-                <div>
-                  <div className="block md:hidden fixed bg-black/80 h-screen w-screen z-50 text-white">
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                      <LargeTitle>JSON Hero only works on desktop</LargeTitle>
-                      <LargeTitle>👇</LargeTitle>
-                      <Body>(For now!)</Body>
-                      <a
-                        href="/"
-                        className="mt-8 text-white bg-lime-500 rounded-sm px-4 py-2"
-                      >
-                        Back to Home
-                      </a>
-                    </div>
-                  </div>
-                  <div className="h-screen flex flex-col sm:overflow-hidden">
+                <div className="h-screen flex flex-col sm:overflow-hidden">
                     <Header />
                     <div className="bg-slate-50 flex-grow transition dark:bg-slate-900 overflow-y-auto">
                       <div className="main-container flex justify-items-stretch h-full">
@@ -184,7 +170,6 @@ export default function JsonDocumentRoute() {
 
                     <Footer />
                   </div>
-                </div>
               </JsonTreeViewProvider>
             </JsonSearchProvider>
           </JsonColumnViewProvider>
