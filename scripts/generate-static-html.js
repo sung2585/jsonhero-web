@@ -30,6 +30,7 @@ const html = `<!DOCTYPE html>
 <body>
   <div id="root"></div>
   ${manifest ? `<script type="module" src="/build/${manifest}"></script>` : ""}
+  <script type="module">window.__remixContext = { appState: {} }</script>
   <script defer type="module" src="/build/${entryClient}"></script>
 </body>
 </html>
