@@ -1,20 +1,19 @@
 import { json, LoaderFunction } from "remix";
 import invariant from "tiny-invariant";
-import { getDocument } from "~/jsonDoc.server";
+import { getDocument } from "~/jsonDoc.client";
+import safeFetch from "~/utilities/safeFetch";
 
-export const loader: LoaderFunction = async ({ params, request }) => {
+export const loader: LoaderFunction = async ({ params }) => {
   invariant(params.id, "expected params.id");
 
-  const doc = await getDocument(params.id);
+  const doc = getDocument(params.id);
 
   if (!doc) {
-    throw new Response("Not Found", {
-      status: 404,
-    });
+    throw new Response("Not Found", { status: 404 });
   }
 
-  if (doc.type == "url") {
-    const jsonResponse = await fetch(doc.url);
+  if (doc.type === "url") {
+    const jsonResponse = await safeFetch(doc.url);
     return jsonResponse.json();
   } else {
     return json(JSON.parse(doc.contents));

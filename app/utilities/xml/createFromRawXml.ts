@@ -1,8 +1,11 @@
 import {
   createFromRawJson,
-  CreateJsonOptions,
   JSONDocument,
-} from "~/jsonDoc.server";
+} from "~/jsonDoc.client";
+
+type CreateJsonOptions = {
+  readOnly?: boolean;
+};
 import convertFromRawXml from "./convertFromRawXml";
 
 export default async function createFromRawXml(

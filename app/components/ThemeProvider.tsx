@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
-import { useFetcher } from "remix";
 
 export type Theme = "dark" | "light";
+
+const THEME_STORAGE_KEY = "jsonhero:theme";
 
 type ThemeContextType = [
   Theme | undefined,
@@ -15,50 +16,45 @@ const prefersLightMQ = "(prefers-color-scheme: light)";
 const getPreferredTheme = () =>
   window.matchMedia(prefersLightMQ).matches ? "light" : "dark";
 
+function getStoredTheme(): Theme | undefined {
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {}
+  return undefined;
+}
+
+function storeTheme(theme: Theme): void {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch {}
+}
+
 export function ThemeProvider({
   children,
-  specifiedTheme,
   themeOverride,
 }: {
   children: ReactNode;
-  specifiedTheme?: Theme;
   themeOverride?: Theme;
 }) {
   const [theme, setTheme] = useState<Theme | undefined>(() => {
-    if (specifiedTheme) {
-      if (specifiedTheme === "light" || specifiedTheme === "dark") {
-        return specifiedTheme;
-      } else {
-        return;
-      }
-    }
+    const stored = getStoredTheme();
+    if (stored) return stored;
 
-    // there's no way for us to know what the theme should be in this context
-    // the client will have to figure it out before hydration.
-    if (typeof window !== "object") {
-      return;
-    }
+    if (typeof window !== "object") return;
 
     return getPreferredTheme();
   });
 
   const mountRun = useRef(false);
-  const persistTheme = useFetcher();
 
   useEffect(() => {
     if (!mountRun.current) {
       mountRun.current = true;
       return;
     }
-
-    if (!theme) {
-      return;
-    }
-
-    persistTheme.submit(
-      { theme },
-      { action: "actions/setTheme", method: "post" }
-    );
+    if (!theme) return;
+    storeTheme(theme);
   }, [theme]);
 
   return (
@@ -78,13 +74,12 @@ export function useTheme(): ThemeContextType {
 
 const clientThemeCode = `
 ;(() => {
-  const theme = window.matchMedia(${JSON.stringify(prefersLightMQ)}).matches
-    ? 'light'
-    : 'dark';
+  const key = "jsonhero:theme";
+  const stored = (() => { try { return localStorage.getItem(key); } catch {} })();
+  const theme = stored || (window.matchMedia(${JSON.stringify(prefersLightMQ)}).matches ? 'light' : 'dark');
   const cl = document.documentElement.classList;
   const themeAlreadyApplied = cl.contains('light') || cl.contains('dark');
   if (themeAlreadyApplied) {
-    // this script shouldn't exist if the theme is already applied!
     console.warn(
       "Hi there, could you let us know you're seeing this message? Thanks!",
     );

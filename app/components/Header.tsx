@@ -12,12 +12,26 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./UI/Popover";
-import { Form } from "remix";
 import { useJsonDoc } from "~/hooks/useJsonDoc";
 import { LogoTriggerdotdev } from "./Icons/LogoTriggerdotdev";
+import { deleteDocument } from "~/jsonDoc.client";
+import { useNavigate } from "remix";
 
 export function Header() {
   const { doc } = useJsonDoc();
+  const navigate = useNavigate();
+
+  const handleDelete = () => {
+    if (
+      !confirm(
+        "This will permanently delete this document, are you sure you want to continue?"
+      )
+    ) {
+      return;
+    }
+    deleteDocument(doc.id);
+    navigate("/");
+  };
 
   return (
     <header className="flex items-center justify-between w-screen h-[40px] bg-indigo-700 dark:bg-slate-800 border-b-[1px] border-slate-600">
@@ -31,21 +45,12 @@ export function Header() {
       <DocumentTitle />
       <ol className="flex text-sm items-center gap-2 px-4">
         {!doc.readOnly && (
-          <Form
-            method="delete"
-            onSubmit={(e) =>
-              !confirm(
-                "This will permanantly delete this document from jsonhero.io, are you sure you want to continue?"
-              ) && e.preventDefault()
-            }
-          >
-            <button type="submit">
-              <button className="flex items-center justify-center py-1 bg-slate-200 text-slate-800 bg-opacity-80 text-base font-bold px-2 rounded uppercase hover:cursor-pointer hover:bg-opacity-100 transition">
-                <TrashIcon className="w-4 h-4 mr-0.5"></TrashIcon>
-                Delete
-              </button>
+          <button onClick={handleDelete}>
+            <button className="flex items-center justify-center py-1 bg-slate-200 text-slate-800 bg-opacity-80 text-base font-bold px-2 rounded uppercase hover:cursor-pointer hover:bg-opacity-100 transition">
+              <TrashIcon className="w-4 h-4 mr-0.5"></TrashIcon>
+              Delete
             </button>
-          </Form>
+          </button>
         )}
 
         <Popover>

@@ -1,4 +1,4 @@
-import { Form } from "remix";
+import { useNavigate } from "remix";
 
 export function ExampleUrl({
   url,
@@ -9,20 +9,20 @@ export function ExampleUrl({
   title: string;
   displayTitle?: string;
 }) {
+  const navigate = useNavigate();
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const encodedUrl = encodeURIComponent(url);
+    navigate(`/new?url=${encodedUrl}&utm_source=example_url`);
+  };
+
   return (
-    <Form
-      method="post"
-      action="/actions/createFromUrl?utm_source=example_url"
-      reloadDocument
+    <button
+      onClick={handleClick}
+      className="bg-slate-900 px-4 py-2 rounded-md whitespace-nowrap text-lime-300 transition hover:text-lime-500"
     >
-      <input type="hidden" name="jsonUrl" value={url} />
-      <input type="hidden" name="title" value={title} />
-      <button
-        type="submit"
-        className="bg-slate-900 px-4 py-2 rounded-md whitespace-nowrap text-lime-300 transition hover:text-lime-500"
-      >
-        {displayTitle ?? title}
-      </button>
-    </Form>
+      {displayTitle ?? title}
+    </button>
   );
 }

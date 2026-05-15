@@ -1,79 +1,55 @@
-import { json, LoaderFunction, redirect } from "remix";
-import invariant from "tiny-invariant";
-import { sendEvent } from "~/graphJSON.server";
-import {
-  createFromRawJson,
-  createFromUrl,
-  CreateJsonOptions,
-} from "~/jsonDoc.server";
+import { useEffect } from "react";
+import { useNavigate, useSearchParams } from "remix";
+import safeFetch from "~/utilities/safeFetch";
+import { createFromRawJson, createFromUrl } from "~/jsonDoc.client";
+import { LargeTitle } from "~/components/Primitives/LargeTitle";
+import { Body } from "~/components/Primitives/Body";
 
-export let loader: LoaderFunction = async ({ request, context }) => {
-  const url = new URL(request.url);
-  const jsonUrl = url.searchParams.get("url");
-  const base64EncodedJson = url.searchParams.get("j");
-  const ttl = url.searchParams.get("ttl");
-  const readOnly = url.searchParams.get("readonly");
-  const title = url.searchParams.get("title");
-  const injest = url.searchParams.get("injest");
+export default function NewRoute() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
-  if (!jsonUrl && !base64EncodedJson) {
-    return redirect("/");
+  useEffect(() => {
+    const jsonUrl = searchParams.get("url");
+    const base64EncodedJson = searchParams.get("j");
+
+    if (jsonUrl) {
+      fetchFromUrl(jsonUrl, navigate);
+    } else if (base64EncodedJson) {
+      try {
+        const decoded = atob(base64EncodedJson);
+        const doc = createFromRawJson("Untitled", decoded);
+        navigate(`/j/${doc.id}`);
+      } catch {
+        navigate("/");
+      }
+    } else {
+      navigate("/");
+    }
+  }, [searchParams, navigate]);
+
+  return (
+    <div className="flex items-center justify-center h-screen bg-indigo-900">
+      <div className="text-center text-white">
+        <LargeTitle>Loading...</LargeTitle>
+        <Body>Fetching JSON document</Body>
+      </div>
+    </div>
+  );
+}
+
+async function fetchFromUrl(urlStr: string, navigate: ReturnType<typeof useNavigate>) {
+  try {
+    const url = new URL(urlStr);
+    const response = await safeFetch(url.href);
+    if (!response.ok) {
+      navigate("/");
+      return;
+    }
+    const json = await response.json();
+    const doc = createFromRawJson(url.hostname, JSON.stringify(json));
+    navigate(`/j/${doc.id}`);
+  } catch {
+    navigate("/");
   }
-
-  const options: CreateJsonOptions = {};
-
-  if (typeof ttl === "string") {
-    invariant(ttl.match(/^\d+$/), "ttl must be a number");
-
-    options.ttl = parseInt(ttl, 10);
-
-    invariant(options.ttl >= 60, "ttl must be at least 60 seconds");
-  }
-
-  if (typeof readOnly === "string") {
-    options.readOnly = readOnly === "true";
-  }
-
-  if (typeof injest === "string") {
-    options.injest = injest === "true";
-  }
-
-  if (jsonUrl) {
-    const jsonURL = new URL(jsonUrl);
-
-    invariant(jsonURL, "url must be a valid URL");
-
-    const doc = await createFromUrl(jsonURL, title ?? jsonURL.href, options);
-
-    context.waitUntil(
-      sendEvent({
-        type: "create",
-        from: "url",
-        hostname: jsonURL.hostname,
-        id: doc.id,
-        source: url.searchParams.get("utm_source") ?? url.hostname,
-      })
-    );
-
-    return redirect(`/j/${doc.id}`);
-  }
-
-  if (base64EncodedJson) {
-    const doc = await createFromRawJson(
-      title ?? "Untitled",
-      atob(base64EncodedJson),
-      options
-    );
-
-    context.waitUntil(
-      sendEvent({
-        type: "create",
-        from: "base64",
-        id: doc.id,
-        source: url.searchParams.get("utm_source"),
-      })
-    );
-
-    return redirect(`/j/${doc.id}`);
-  }
-};
+}
